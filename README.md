@@ -1,3 +1,5 @@
+This original Repo of this work can be found here [https://github.com/vita-epfl/social-transmotion?tab=readme-ov-file#jrdb-dataset](https://github.com/vita-epfl/social-transmotion.git)
+
 <div align="center">
 <h1> Social-Transmotion:<br>  Promptable Human Trajectory Prediction </h1>
 <h3>Saeed Saadatnejad*, Yang Gao*, Kaouther Messaoud, Alexandre Alahi
