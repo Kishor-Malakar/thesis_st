@@ -5,8 +5,8 @@ import numpy as np
 from progress.bar import Bar
 from torch.utils.data import DataLoader
 
-from dataset_jrdb import batch_process_coords, create_dataset, collate_batch
-from model_jrdb import create_model
+from dataset_jrdb_merged import batch_process_coords, create_dataset, collate_batch
+from model_merged import create_model
 from utils.utils import create_logger
 
 def inference(model, config, input_joints, padding_mask, out_len=14):
@@ -137,7 +137,7 @@ if __name__ == "__main__":
     ################################
 
     model = create_model(config, logger)
-    model.load_state_dict(ckpt['model']) 
+    model.load_state_dict(ckpt['model'], strict=False) 
     ################################
     # Load data
     ################################

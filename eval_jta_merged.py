@@ -6,7 +6,7 @@ from progress.bar import Bar
 from torch.utils.data import DataLoader
 
 from dataset_jta import batch_process_coords, create_dataset, collate_batch
-from model_jta import create_model
+from model_merged import create_model
 from utils.utils import create_logger
 
 def inference(model, config, input_joints, padding_mask, out_len=14):
@@ -70,39 +70,6 @@ def evaluate_ade_fde(model, modality_selection, dataloader, bs, config, logger, 
     fde = fde_batch/((batch_id-1)*batch_size+len(out_joints))
     return ade, fde
 
-
-def evaluate_aswaee(model, modality_selection, dataloader, bs, config, logger, weights=None):
-    in_F, out_F = config['TRAIN']['input_track_size'], config['TRAIN']['output_track_size']
-    aswaee_total, batch_count = 0, 0
-    
-    if weights is None:
-        # weights = np.ones(out_F)
-        weights = np.linspace(1, 0.5, out_F)
-    weights = np.array(weights) / np.sum(weights)
-
-    for batch in dataloader:
-        joints, masks, padding_mask = batch
-        padding_mask = padding_mask.to(config["DEVICE"])
-
-        in_joints, in_masks, out_joints, out_masks, padding_mask = batch_process_coords(joints, masks, padding_mask, config, modality_selection)
-        pred_joints = inference(model, config, in_joints, padding_mask, out_len=out_F)
-
-        out_joints = out_joints.cpu()
-        pred_joints = pred_joints.cpu().reshape(out_joints.size(0), out_F, 1, 2)
-
-        for k in range(len(out_joints)):
-            gt_xy = out_joints[k, :, 0, :2]
-            pred_xy = pred_joints[k, :, 0, :2]
-            
-            weighted_error = np.sum(weights * np.linalg.norm(gt_xy.detach().numpy() - pred_xy.detach().numpy(), axis=1))
-            aswaee_total += weighted_error
-        
-        batch_count += len(out_joints)
-    
-    aswaee = aswaee_total / batch_count
-    return aswaee
-
-
 if __name__ == "__main__":
     
     parser = argparse.ArgumentParser()
@@ -110,7 +77,6 @@ if __name__ == "__main__":
     parser.add_argument("--split", type=str, default="test", help="Split to use. one of [train, test, valid]")
     parser.add_argument("--metric", type=str, default="vim", help="Evaluation metric. One of (vim, mpjpe)")
     parser.add_argument("--modality", type=str, default="traj+all", help="available modality combination from['traj','traj+2dbox','traj+3dpose','traj+2dpose','traj+3dpose+3dbox','traj+all']")
-    parser.add_argument("--evaluate_aswaee", action="store_true", help="Flag to enable ASWAEE evaluation")
 
     args = parser.parse_args()
 
@@ -142,7 +108,7 @@ if __name__ == "__main__":
     ################################
 
     model = create_model(config, logger)
-    model.load_state_dict(ckpt['model']) 
+    model.load_state_dict(ckpt['model'], strict=False) 
     ################################
     # Load data
     ################################
@@ -155,30 +121,14 @@ if __name__ == "__main__":
     
     dataset = create_dataset(name[0], logger, split=args.split, track_size=(in_F+out_F), track_cutoff=in_F)
 
+    
+ 
     bs = config['TRAIN']['batch_size']
     dataloader = DataLoader(dataset, batch_size=bs, num_workers=config['TRAIN']['num_workers'], shuffle=False, collate_fn=collate_batch)
-    ade, fde = evaluate_ade_fde(model, args.modality, dataloader, bs, config, logger, return_all=True)
-    aswaee = evaluate_aswaee(model, args.modality, dataloader, bs, config, logger)
+    ade,fde = evaluate_ade_fde(model, args.modality, dataloader, bs, config, logger, return_all=True)
+
 
     print('ADE: ', ade)
     print('FDE: ', fde)
-    print('ASWAEE: ', aswaee)
+    
 
-# Your new metrics
-metrics = np.array([[ade, fde, aswaee]])
-
-# Try loading the existing file, if it exists
-try:
-    existing_metrics = np.load("metrics0.npy")
-    # Concatenate the new metrics with the existing ones
-    updated_metrics = np.concatenate((existing_metrics, metrics), axis=0)
-except FileNotFoundError:
-    # If the file doesn't exist, just use the new metrics
-    updated_metrics = metrics
-
-# Save the updated metrics
-np.save("metrics0.npy", updated_metrics)
-
-# Load it later
-loaded_metrics = np.load("metrics0.npy")
-print('Loaded Metrics: ', loaded_metrics)
