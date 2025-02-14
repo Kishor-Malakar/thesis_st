@@ -5,8 +5,8 @@ import matplotlib.pyplot as plt
 data = np.load("metrics.npy")
 
 # Labels for the x-axis
-# methods = ["traj", "traj+2dbox"]
-methods = ["traj","traj+2dbox"] 
+methods = ["traj", "traj+2dbox"]
+# methods = ["traj","traj+2dbox"] 
 # Extracting columns
 ade = data[:, 0]
 fde = data[:, 1]
