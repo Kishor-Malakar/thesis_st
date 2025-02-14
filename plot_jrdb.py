@@ -6,7 +6,7 @@ data = np.load("metrics.npy")
 
 # Labels for the x-axis
 # methods = ["traj", "traj+2dbox"]
-methods = ["traj", "traj+2dbox", "traj+3dpose", "traj+2dpose", "traj+3dpose+3dbox", "traj+all"]
+methods = ["traj"]
 # Extracting columns
 ade = data[:, 0]
 fde = data[:, 1]
